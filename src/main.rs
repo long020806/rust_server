@@ -29,6 +29,7 @@ async fn main() -> std::io::Result<()> {
             .service(hello::rand_data_mysql)
             .service(hello::json_data_mysql)
             .service(hello::rand2_data_mysql)
+            .service(hello::rand3_data_mysql)
     })
     .bind("127.0.0.1:8080")?
     .run()
