@@ -1,0 +1,1 @@
+sqlx migrate run --database-url=mysql://dragon:dragon@localhost:3306/rust
