@@ -6,7 +6,7 @@ use serde::{Serialize, Deserialize};
 use crate::my_repsonse as response;
 mod hello;
 use hello::User;
-use sqlx::{mysql::MySqlPool, MySqlConnection, Executor};
+use sqlx::{mysql::MySqlPool, MySqlConnection};
 mod data;
 use data::MyJsonData;
 #[derive(Debug, Serialize)]
@@ -121,9 +121,34 @@ pub async fn rand_data_mysql(pool: web::Data<MySqlPool>,data:web::Query<MyQuery>
 
 #[post("/mysql/data/rand2")]
 pub async fn rand2_data_mysql(pool: web::Data<MySqlPool>,data:web::Query<MyQuery>) -> HttpResponse{
-
-    response::json_response(StatusCode::OK, "Data retrieved successfully", Some(()))
+    //  10w 数据 1342ms   事务提交 17.31s
+    let mut rng = rand::thread_rng();
+    let mut result:Vec<String> = vec![];
+    for _ in 0..data.value {
+        let s: String = Alphanumeric
+        .sample_iter(&mut rng)
+        .take(7)
+        .map(char::from)
+        .collect::<String>()
+        .to_uppercase();
+        result.push("('".to_owned()+&s+"')")
+    }
+    // let params = vec!["test1","test2"];
+    // let sql = "INSERT INTO users (username) VALUES (?)";
+    let sql = "INSERT INTO users (username) VALUES ".to_owned() + &result.join(",");
+    match sqlx::query(&sql).execute(pool.get_ref()).await {
+        Ok(_) => {
+            response::json_response(StatusCode::OK, "Data retrieved successfully", Some(sql))
+        },
+        Err(e) => {
+            eprintln!("Failed to execute query: {:?}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
 }
+
+
+
 
 
 #[post("/mysql/data/json")]
@@ -140,7 +165,7 @@ pub async fn json_data_mysql(data:web::Json<MyJsonData>,pool: web::Data<MySqlPoo
     Err(e) => {
         eprintln!("Failed to execute query: {:?}", e);
         HttpResponse::InternalServerError().finish()
-    }
+        }
     }
 
 }
