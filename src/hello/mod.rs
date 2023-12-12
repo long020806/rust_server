@@ -177,15 +177,21 @@ pub async fn json_data_mysql(
     {
         Ok(count) => {
             let mut page = data.page;
-            let pages = count / data.size;
-            if offset >= count {
-                offset = 0;
+            let mut pages = count / data.size;
+            if page < 1 {
                 page = 1;
             }
+            if count > data.size * pages{
+                pages= pages + 1;
+            }
+            if offset > count {
+                page = pages;
+            }
+            offset = (page - 1)*data.size;
             eprintln!("data start :{}",Utc::now());
             let result: Result<Vec<User>, _> = sqlx::query_as!(
                 User,
-                "SELECT id, username, created_at FROM users limit ?,?",
+                "SELECT id, username, created_at FROM users order by id limit ?,?",
                 offset,
                 limit
             )
