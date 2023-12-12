@@ -166,20 +166,46 @@ pub async fn json_data_mysql(
     pool: web::Data<MySqlPool>,
 ) -> HttpResponse {
     // 使用数据库连接池执行查询
-    let offset = (data.page - 1) * data.size;
+    let mut offset = (data.page - 1) * data.size;
     let limit = data.size;
-    let result: Result<Vec<User>, _> = sqlx::query_as!(
-        User,
-        "SELECT id, username, created_at FROM users limit ?,?",
-        offset,
-        limit
-    )
-    .fetch_all(pool.get_ref())
-    .await;
-
-    match result {
-        Ok(users) => {
-            response::json_response(StatusCode::OK, "Data retrieved successfully", Some(users))
+    eprintln!("count start :{}",Utc::now());
+    let count_result:Result<i32, sqlx::Error> = sqlx::query_scalar("select count(1) from users")
+        .fetch_one(pool.get_ref())
+        .await;
+    eprintln!("count end :{}",Utc::now());
+    match count_result
+    {
+        Ok(count) => {
+            let mut page = data.page;
+            let pages = count / data.size;
+            if offset >= count {
+                offset = 0;
+                page = 1;
+            }
+            eprintln!("data start :{}",Utc::now());
+            let result: Result<Vec<User>, _> = sqlx::query_as!(
+                User,
+                "SELECT id, username, created_at FROM users limit ?,?",
+                offset,
+                limit
+            )
+            .fetch_all(pool.get_ref())
+            .await;
+            eprintln!("data end :{}",Utc::now());
+            match result {
+                Ok(users) => response::json_page_response(
+                    StatusCode::OK,
+                    "Data retrieved successfully",
+                    Some(users),
+                    page,
+                    pages,
+                    count
+                ),
+                Err(e) => {
+                    eprintln!("Failed to execute query: {:?}", e);
+                    HttpResponse::InternalServerError().finish()
+                }
+            }
         }
         Err(e) => {
             eprintln!("Failed to execute query: {:?}", e);
