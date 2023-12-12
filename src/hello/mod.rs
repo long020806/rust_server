@@ -1,18 +1,15 @@
-use crate::my_repsonse as response;
+use crate::{my_repsonse as response, hello::data::MyQuery};
 use actix_web::{get, http::StatusCode, post, web, HttpResponse};
 use chrono::Utc;
 use rand::{distributions::Alphanumeric, prelude::Distribution};
-use serde::{Deserialize, Serialize};
+
 mod hello;
 use hello::User;
 use sqlx::{mysql::MySqlPool, MySqlConnection};
 mod data;
 use data::MyJsonData;
-#[derive(Debug, Serialize)]
-struct MyData {
-    key: String,
-    value: i32,
-}
+
+use self::data::MyData;
 
 #[get("/test2")]
 async fn test2() -> HttpResponse {
@@ -65,10 +62,6 @@ pub async fn add_data_mysql(pool: web::Data<MySqlPool>, username: String) -> Htt
             HttpResponse::InternalServerError().finish()
         }
     }
-}
-#[derive(Deserialize, Debug)]
-struct MyQuery {
-    value: i32,
 }
 
 #[post("/mysql/data/rand")]
