@@ -13,10 +13,10 @@ async fn main() -> std::io::Result<()> {
    let pool = MySqlPool::connect(database_url).await.unwrap();
 
    // 运行数据库迁移（如果需要的话）
-   sqlx::migrate!("./migrations")
-       .run(&pool)
-       .await
-       .expect("Failed to run migrations");
+//    sqlx::migrate!("./migrations")
+//        .run(&pool)
+//        .await
+//        .expect("Failed to run migrations");
 
     HttpServer::new(move|| {
         App::new()
