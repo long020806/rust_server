@@ -6,3 +6,9 @@ pub struct MyJsonData {
     pub size: i32,
 }
 
+
+#[derive(Deserialize,Debug,Serialize)]
+pub struct MyDetailQuery {
+    pub id: String
+}
+

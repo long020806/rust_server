@@ -8,6 +8,8 @@ use hello::User;
 use sqlx::{mysql::MySqlPool, MySqlConnection};
 mod data;
 use data::MyJsonData;
+
+use self::data::MyDetailQuery;
 #[derive(Debug, Serialize)]
 struct MyData {
     key: String,
@@ -168,27 +170,26 @@ pub async fn json_data_mysql(
     // 使用数据库连接池执行查询
     let mut offset = (data.page - 1) * data.size;
     let limit = data.size;
-    eprintln!("count start :{}",Utc::now());
-    let count_result:Result<i32, sqlx::Error> = sqlx::query_scalar("select count(1) from users")
+    eprintln!("count start :{}", Utc::now());
+    let count_result: Result<i32, sqlx::Error> = sqlx::query_scalar("select count(1) from users")
         .fetch_one(pool.get_ref())
         .await;
-    eprintln!("count end :{}",Utc::now());
-    match count_result
-    {
+    eprintln!("count end :{}", Utc::now());
+    match count_result {
         Ok(count) => {
             let mut page = data.page;
             let mut pages = count / data.size;
             if page < 1 {
                 page = 1;
             }
-            if count > data.size * pages{
-                pages= pages + 1;
+            if count > data.size * pages {
+                pages = pages + 1;
             }
             if offset > count {
                 page = pages;
             }
-            offset = (page - 1)*data.size;
-            eprintln!("data start :{}",Utc::now());
+            offset = (page - 1) * data.size;
+            eprintln!("data start :{}", Utc::now());
             let result: Result<Vec<User>, _> = sqlx::query_as!(
                 User,
                 "SELECT id, username, created_at FROM users order by id limit ?,?",
@@ -197,7 +198,7 @@ pub async fn json_data_mysql(
             )
             .fetch_all(pool.get_ref())
             .await;
-            eprintln!("data end :{}",Utc::now());
+            eprintln!("data end :{}", Utc::now());
             match result {
                 Ok(users) => response::json_page_response(
                     StatusCode::OK,
@@ -205,13 +206,33 @@ pub async fn json_data_mysql(
                     Some(users),
                     page,
                     pages,
-                    count
+                    count,
                 ),
                 Err(e) => {
                     eprintln!("Failed to execute query: {:?}", e);
                     HttpResponse::InternalServerError().finish()
                 }
             }
+        }
+        Err(e) => {
+            eprintln!("Failed to execute query: {:?}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
+#[get("/mysql/data/detail")]
+pub async fn detail(pool: web::Data<MySqlPool>, data: web::Query<MyDetailQuery>) -> HttpResponse {
+    let query_result = sqlx::query_as!(
+        User,
+        "select id, username, created_at from users where id = ?",
+        data.id
+    )
+    .fetch_one(pool.get_ref())
+    .await;
+    match query_result {
+        Ok(user) => {
+            response::json_response(StatusCode::OK, "Data retrieved successfully", Some(user))
         }
         Err(e) => {
             eprintln!("Failed to execute query: {:?}", e);
