@@ -9,7 +9,7 @@ use sqlx::{mysql::MySqlPool, MySqlConnection};
 mod data;
 use data::MyJsonData;
 
-use self::data::MyData;
+use self::data::{MyData, UserVo};
 
 #[get("/test2")]
 async fn test2() -> HttpResponse {
@@ -191,14 +191,19 @@ pub async fn json_data_mysql(
             .await;
             eprintln!("data end :{}", Utc::now());
             match result {
-                Ok(users) => response::json_page_response(
-                    StatusCode::OK,
-                    "Data retrieved successfully",
-                    Some(users),
-                    page,
-                    pages,
-                    count,
-                ),
+                Ok(users) => {
+                    let user_vo:Vec<UserVo> = users.iter().map(|item|{
+                        trans_user_vo(item)
+                    }).collect();
+                    response::json_page_response(
+                        StatusCode::OK,
+                        "Data retrieved successfully",
+                        Some(user_vo),
+                        page,
+                        pages,
+                        count,
+                    )
+                },
                 Err(e) => {
                     eprintln!("Failed to execute query: {:?}", e);
                     HttpResponse::InternalServerError().finish()
@@ -214,6 +219,7 @@ pub async fn json_data_mysql(
 
 #[get("/mysql/data/detail")]
 pub async fn detail(pool: web::Data<MySqlPool>, data: web::Query<MyDetailQuery>) -> HttpResponse {
+    eprintln!("select start time:{}",Utc::now());
     let query_result = sqlx::query_as!(
         User,
         "select id, username, created_at from users where id = ?",
@@ -221,6 +227,8 @@ pub async fn detail(pool: web::Data<MySqlPool>, data: web::Query<MyDetailQuery>)
     )
     .fetch_one(pool.get_ref())
     .await;
+    eprintln!("select end time:{}",Utc::now());
+
     match query_result {
         Ok(user) => {
             response::json_response(StatusCode::OK, "Data retrieved successfully", Some(user))
@@ -230,4 +238,14 @@ pub async fn detail(pool: web::Data<MySqlPool>, data: web::Query<MyDetailQuery>)
             HttpResponse::InternalServerError().finish()
         }
     }
+}
+
+
+fn trans_user_vo(user:&User)->UserVo{
+    UserVo { id: user.id, username: user.username.clone(), created_at: match user.created_at {
+        Some(date) => {
+           Some(date.format("%Y-%m-%d %H:%M").to_string())
+        }
+        None => Option::None,
+    } }
 }

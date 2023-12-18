@@ -22,3 +22,10 @@ pub struct MyData {
 pub struct MyQuery {
     pub value: i32,
 }
+
+#[derive(Deserialize,Serialize, Debug)]
+pub struct UserVo{
+    pub id: i32,
+    pub username: String,
+    pub created_at: Option<String>,
+}
