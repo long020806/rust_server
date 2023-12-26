@@ -1,10 +1,15 @@
-use crate::{my_repsonse as response, hello::data::{MyQuery, MyDetailQuery}};
+
+
+
+
+use crate::{my_repsonse as response, hello::data::{MyQuery, MyDetailQuery, TestJsonData}};
 use actix_web::{get, http::StatusCode, post, web, HttpResponse};
 use chrono::Utc;
 use rand::{distributions::Alphanumeric, prelude::Distribution};
 
 mod hello;
 use hello::User;
+use regex::Regex;
 use sqlx::{mysql::MySqlPool, MySqlConnection};
 mod data;
 use data::MyJsonData;
@@ -248,4 +253,54 @@ fn trans_user_vo(user:&User)->UserVo{
         }
         None => Option::None,
     } }
+}
+
+
+#[post("/mysql/data/json2")]
+pub async fn json2_data_mysql(
+    _data: web::Json<MyJsonData>,
+    _pool: web::Data<MySqlPool>,
+) -> HttpResponse {
+   let page_user = test1(_data.page>100);
+    match page_user {
+        Ok(users) => {
+            response::json_response(StatusCode::OK, "Data retrieved successfully", Some(users))
+        },
+        Err(e)=>{
+            response::json_response(StatusCode::BAD_REQUEST, e, Some(()))
+        }
+    }
+}
+
+fn test1(bool:bool)->Result<Vec<User>, &'static str>{
+    if bool {
+        return Result::Ok(vec![])
+    }else{
+        return Result::Err("发生错误");
+    }
+}
+
+
+#[post("/mysql/data/test")]
+pub async fn test(
+    _data: web::Json<TestJsonData>,
+    _pool: web::Data<MySqlPool>,
+) -> HttpResponse {
+    let temp = test_regex(_data.value.clone());
+    response::json_response(StatusCode::OK, "成功", Some(temp))
+}
+
+fn test_regex(str:String) -> String  {
+    let reg = match Regex::new(r"\B(?=(\d{3})+(?!\d))") {
+        Ok(reg) => {
+            let replace_txt = reg.replace_all(str.as_str(), ",");
+            replace_txt.into_owned()
+        },
+        Err(_) => {
+            let result = "正则不支持".to_string();
+            result
+        },
+    };
+    reg
+
 }

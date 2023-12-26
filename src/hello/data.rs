@@ -29,3 +29,8 @@ pub struct UserVo{
     pub username: String,
     pub created_at: Option<String>,
 }
+
+#[derive(Deserialize,Debug,Serialize)]
+pub struct TestJsonData {
+    pub value: String,
+}
